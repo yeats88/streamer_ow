@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>守望职业直播监控</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <div class="brand">
+        <img src="/favicon.svg" alt="" width="36" height="36" />
+        <div>
+          <h1>守望职业直播</h1>
+          <p>OWCS 选手、教练和官方转播的开播状态</p>
+        </div>
+      </div>
+      <div class="stats" id="stats">
+        <div><strong id="live-count">–</strong><span>正在直播</span></div>
+        <div><strong id="roster-count">–</strong><span>监控频道</span></div>
+        <div><strong id="updated-at">等待扫描</strong><span id="check-state">尚未刷新</span></div>
+      </div>
+      <div class="actions">
+        <button id="notify-btn" type="button">开播提醒</button>
+        <button id="add-btn" type="button">添加选手</button>
+        <button id="settings-btn" type="button">设置</button>
+      </div>
+    </header>
+
+    <section class="filters">
+      <input id="search" type="search" placeholder="搜索选手、队伍、别名" autocomplete="off" />
+      <select id="region"></select>
+      <select id="role">
+        <option value="">全部位置</option>
+        <option value="tank">坦克</option>
+        <option value="dps">输出</option>
+        <option value="support">支援</option>
+        <option value="flex">全能</option>
+        <option value="coach">教练</option>
+      </select>
+      <select id="team"></select>
+      <div class="kind-filters" id="kinds">
+        <label><input type="checkbox" value="player" checked /> 选手</label>
+        <label><input type="checkbox" value="broadcast" checked /> 官方转播</label>
+        <label><input type="checkbox" value="coach" /> 教练</label>
+        <label><input type="checkbox" value="caster" /> 解说</label>
+        <label><input type="checkbox" value="creator" /> 创作者</label>
+        <label><input type="checkbox" value="staff" /> 工作人员</label>
+        <label><input type="checkbox" value="other" /> 其他</label>
+      </div>
+      <label class="fav-only"><input id="fav-only" type="checkbox" /> 只看收藏</label>
+    </section>
+
+    <p id="errors" class="errors" hidden></p>
+
+    <section>
+      <div class="section-head">
+        <h2>正在直播</h2>
+        <button id="copy-live" type="button">复制开播列表</button>
+      </div>
+      <div id="live-grid" class="live-grid"></div>
+      <p id="live-empty" class="empty" hidden>当前筛选下没有人开播。第一次扫描大约需要一分钟。</p>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>全部频道</h2>
+        <span id="filtered-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>选手</th>
+              <th>队伍</th>
+              <th>赛区</th>
+              <th>位置</th>
+              <th>状态</th>
+              <th>平台</th>
+            </tr>
+          </thead>
+          <tbody id="roster-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      状态直接查询 Twitch、CHZZK、SOOP、哔哩哔哩和 YouTube。名册是公开选手直播间快照，可以手动添加或隐藏。仅供本地查看。
+    </footer>
+  </div>
+
+  <dialog id="add-dialog">
+    <form id="add-form">
+      <h3>添加直播间</h3>
+      <label>名字 <input name="name" required /></label>
+      <label>队伍 <input name="team" /></label>
+      <label>赛区
+        <select name="region">
+          <option value="KR">韩国</option>
+          <option value="CN">中国</option>
+          <option value="NA">北美</option>
+          <option value="EMEA">欧洲</option>
+          <option value="JP">日本</option>
+          <option value="PAC">太平洋</option>
+          <option value="">未分区</option>
+        </select>
+      </label>
+      <label>位置
+        <select name="role">
+          <option value="dps">输出</option>
+          <option value="tank">坦克</option>
+          <option value="support">支援</option>
+          <option value="flex">全能</option>
+          <option value="coach">教练</option>
+        </select>
+      </label>
+      <label>Twitch 用户名或链接 <input name="twitch" placeholder="ansansniper" /></label>
+      <label>CHZZK 频道 ID 或链接 <input name="chzzk" /></label>
+      <label>SOOP ID 或链接 <input name="soop" /></label>
+      <label>哔哩哔哩 UID / 房间链接 <input name="bilibili" /></label>
+      <label>YouTube 频道链接 <input name="youtube" placeholder="https://www.youtube.com/@name" /></label>
+      <p class="form-error" id="add-error"></p>
+      <div class="dialog-actions">
+        <button type="button" id="add-cancel">取消</button>
+        <button type="submit" class="primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings-dialog">
+    <form id="settings-form">
+      <h3>监控设置</h3>
+      <label>刷新间隔（秒） <input name="intervalSec" type="number" min="20" max="300" value="45" /></label>
+      <label>YouTube 检查
+        <select name="youtubeMode">
+          <option value="primary">只查主要在 YouTube 播的人</option>
+          <option value="all">检查所有 YouTube 频道（更慢）</option>
+          <option value="off">不查 YouTube</option>
+        </select>
+      </label>
+      <label>Twitch Client ID（可选，留空则用公开接口） <input name="twitchClientId" autocomplete="off" /></label>
+      <label>Twitch Client Secret <input name="twitchClientSecret" type="password" autocomplete="new-password" placeholder="已保存则留空" /></label>
+      <p class="hint">密钥只保存在本机 data/settings.json，不会上传。填了官方密钥后，Twitch 状态会走 Helix API。</p>
+      <div class="dialog-actions">
+        <button type="button" id="refresh-roster">更新选手名册</button>
+        <button type="button" id="settings-cancel">关闭</button>
+        <button type="submit" class="primary">保存</button>
+      </div>
+      <p class="form-error" id="settings-error"></p>
+    </form>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>

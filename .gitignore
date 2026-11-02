@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/status_cache.json
+data/settings.json
+data/custom.json
+data/hidden.json
