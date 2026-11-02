@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
-import urllib.request
 from pathlib import Path
 from network import request_bytes
 
