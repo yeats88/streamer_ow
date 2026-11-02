@@ -134,9 +134,17 @@ async function refresh() {
   }
   notifyLive();
   render();
-  if (data.settings) {
+  if (data.settings && !$("settings-dialog").open) {
     $("settings-form").intervalSec.value = data.settings.intervalSec;
     $("settings-form").youtubeMode.value = data.settings.youtubeMode;
+    const form = $("settings-form");
+    form.elements.proxyEnabled.checked = data.settings.proxyEnabled;
+    form.elements.proxyUrl.placeholder = data.settings.proxyConfigured
+      ? "已保存代理地址，留空保留；填写新地址可替换"
+      : "http://127.0.0.1:7890";
+    document.querySelectorAll('#proxy-platforms input').forEach((input) => {
+      input.checked = (data.settings.proxyPlatforms || []).includes(input.value);
+    });
   }
 }
 
@@ -203,9 +211,21 @@ $("settings-cancel").addEventListener("click", () => $("settings-dialog").close(
 $("settings-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const body = Object.fromEntries(new FormData(event.target).entries());
-  const response = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const data = await response.json();
-  $("settings-error").textContent = data.ok ? "已保存，下一轮扫描生效" : (data.error || "保存失败");
+  body.proxyEnabled = event.target.elements.proxyEnabled.checked;
+  body.proxyPlatforms = new FormData(event.target).getAll("proxyPlatforms");
+  try {
+    const response = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await response.json();
+    $("settings-error").textContent = data.ok ? "已保存，后续请求生效；正在进行的请求不受影响" : (data.error || "保存失败");
+    if (data.ok) {
+      event.target.elements.proxyUrl.value = "";
+      event.target.elements.proxyUrl.placeholder = data.settings.proxyConfigured
+        ? "已保存代理地址，留空保留；填写新地址可替换"
+        : "http://127.0.0.1:7890";
+    }
+  } catch (error) {
+    $("settings-error").textContent = `保存失败：${error.message}`;
+  }
 });
 $("refresh-roster").addEventListener("click", async () => {
   $("settings-error").textContent = "正在更新名册…";

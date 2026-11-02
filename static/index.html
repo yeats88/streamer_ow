@@ -144,6 +144,20 @@
       <label>Twitch Client ID（可选，留空则用公开接口） <input name="twitchClientId" autocomplete="off" /></label>
       <label>Twitch Client Secret <input name="twitchClientSecret" type="password" autocomplete="new-password" placeholder="已保存则留空" /></label>
       <p class="hint">密钥只保存在本机 data/settings.json，不会上传。填了官方密钥后，Twitch 状态会走 Helix API。</p>
+      <label class="proxy-toggle"><input name="proxyEnabled" type="checkbox" /> 启用服务器代理</label>
+      <label>HTTP 代理地址
+        <input name="proxyUrl" type="password" autocomplete="new-password" placeholder="http://127.0.0.1:7890" />
+      </label>
+      <p class="hint" id="proxy-hint">支持 HTTP 代理访问 HTTPS 网站；暂不支持 SOCKS。地址指服务器上的代理，不是浏览器所在电脑。</p>
+      <fieldset id="proxy-platforms">
+        <legend>走代理的查询</legend>
+        <label><input name="proxyPlatforms" type="checkbox" value="twitch" /> Twitch</label>
+        <label><input name="proxyPlatforms" type="checkbox" value="chzzk" /> CHZZK</label>
+        <label><input name="proxyPlatforms" type="checkbox" value="soop" /> SOOP</label>
+        <label><input name="proxyPlatforms" type="checkbox" value="youtube" /> YouTube</label>
+        <label><input name="proxyPlatforms" type="checkbox" value="bilibili" /> 哔哩哔哩</label>
+        <label><input name="proxyPlatforms" type="checkbox" value="roster" /> 名册更新</label>
+      </fieldset>
       <div class="dialog-actions">
         <button type="button" id="refresh-roster">更新选手名册</button>
         <button type="button" id="settings-cancel">关闭</button>

@@ -7,6 +7,7 @@ import re
 import unicodedata
 import urllib.request
 from pathlib import Path
+from network import request_bytes
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
@@ -211,12 +212,12 @@ def normalize_player(raw: dict, fallback_id: str = "") -> dict | None:
 
 
 def fetch_source_players() -> list[dict]:
-    request = urllib.request.Request(
+    raw = request_bytes(
         ROSTER_SOURCE,
         headers={"User-Agent": "OWCSLiveMonitor/1.0 (local dashboard)", "Accept": "application/json"},
+        timeout=60,
     )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    payload = json.loads(raw.decode("utf-8"))
     rows = payload.get("playerLinks") or payload.get("players") or []
     if not isinstance(rows, list):
         raise ValueError("名册响应格式无法识别")

@@ -13,11 +13,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 from roster import DATA_DIR, merged_roster
+from network import PROXY_DEFAULTS, request_bytes, validate_proxy
 
 CACHE_PATH = DATA_DIR / "status_cache.json"
 SETTINGS_PATH = DATA_DIR / "settings.json"
 TWITCH_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
-DEFAULT_SETTINGS = {"intervalSec": 45, "youtubeMode": "primary"}
+DEFAULT_SETTINGS = {"intervalSec": 45, "youtubeMode": "primary", **PROXY_DEFAULTS}
 
 
 def utc_now() -> str:
@@ -40,6 +41,7 @@ def load_settings() -> dict:
     settings["intervalSec"] = max(20, min(int(settings.get("intervalSec") or 45), 300))
     if settings.get("youtubeMode") not in {"off", "primary", "all"}:
         settings["youtubeMode"] = "primary"
+    validate_proxy(settings)
     return settings
 
 
@@ -53,6 +55,15 @@ def save_settings(updates: dict) -> dict:
         current["twitchClientId"] = str(updates["twitchClientId"]).strip()
     if str(updates.get("twitchClientSecret") or "").strip():
         current["twitchClientSecret"] = str(updates["twitchClientSecret"]).strip()
+    for key in ("proxyEnabled", "proxyPlatforms"):
+        if key in updates:
+            current[key] = updates[key]
+    if "proxyUrl" in updates:
+        if not isinstance(updates["proxyUrl"], str):
+            raise ValueError("代理地址必须是字符串")
+        if updates["proxyUrl"].strip():
+            current["proxyUrl"] = updates["proxyUrl"].strip()
+    validate_proxy(current)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     SETTINGS_PATH.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
     return public_settings(current)
@@ -64,13 +75,14 @@ def public_settings(settings: dict | None = None) -> dict:
         "intervalSec": settings["intervalSec"],
         "youtubeMode": settings["youtubeMode"],
         "twitchConfigured": bool(settings.get("twitchClientId") and settings.get("twitchClientSecret")),
+        "proxyEnabled": settings["proxyEnabled"],
+        "proxyConfigured": bool(settings["proxyUrl"]),
+        "proxyPlatforms": settings["proxyPlatforms"],
     }
 
 
 def _request(url: str, data: bytes | None = None, headers: dict | None = None, timeout: int = 12) -> bytes:
-    request = urllib.request.Request(url, data=data, headers=headers or {"User-Agent": "OWCSLiveMonitor/1.0"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read()
+    return request_bytes(url, data=data, headers=headers, timeout=timeout)
 
 
 class LiveMonitor:
